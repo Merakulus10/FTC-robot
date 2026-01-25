@@ -132,6 +132,7 @@ public class StarterBotTeleopMecanums extends OpMode {
             intake.setPower(gamepad1.left_trigger);
         } else if (gamepad1.right_trigger > 0) {
             intake.setPower(-gamepad1.right_trigger);
+            launchServo(-gamepad1.right_trigger);
         } else if (gamepad1.a) { // run intake
             if (intakeOn) {
                 stopIntake();
