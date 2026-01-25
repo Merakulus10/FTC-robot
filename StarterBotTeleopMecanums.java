@@ -67,7 +67,7 @@ public class StarterBotTeleopMecanums extends OpMode {
     int launcherAccelTime;
     int launchState;
     boolean modifyAttrButtonPressed;
-    boolean intakeOn;
+    // boolean intakeOn;
 
     Telemetry.Item launcherPowerItem;
     Telemetry.Item launcherAccelTimeItem;
@@ -121,10 +121,23 @@ public class StarterBotTeleopMecanums extends OpMode {
 
     @Override
     public void loop() {
+        if (launchState == 2) {
+            if (gamepad1.a) {
+                launchState = 0;
+                launchStateItem.setValue("Idle");
+            } else {
+                launch();
+                return;
+            }
+        }
         mecanumDrive(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
         if (launchState == 1 && timer.milliseconds() >= launcherAccelTime) { // launcher has finished accelerating
             launchState = 2;
+            mecanumDrive(0, 0, 0);
+            launchServo(1);
+            timer.reset();
             launch();
+            return;
         } else if (gamepad1.b) { // start launch sequence
             launch();
         }
@@ -134,10 +147,9 @@ public class StarterBotTeleopMecanums extends OpMode {
             intake.setPower(-gamepad1.right_trigger);
             launchServo(-gamepad1.right_trigger);
         } else if (gamepad1.a) { // run intake
-            if (intakeOn) {
-                stopIntake();
-            } else {
-                intake();
+            if (launchState != 0) {
+                launchState = 0;
+                launchStateItem.setValue("Idle");
             }
             intake();
         } else {
@@ -217,35 +229,21 @@ public class StarterBotTeleopMecanums extends OpMode {
             launchState = 1;
             launchStateItem.setValue("Accelerating");
         } else if (launchState == 2) {
-            mecanumDrive(0, 0, 0);
-            launchServo(1);
-            for (int i=0; i<3; i++) {
-                launchStateItem.setValue("Feed loop %d", i+1);
-                telemetry.update();
-                intake.setPower(-0.5);
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {}
-
+            if (timer.milliseconds() >= 3000) {
+                launcher.setPower(0);
+                launchServo(0);
+                launchState = 0;
+                launchStateItem.setValue("Idle");
+            } else if (timer.milliseconds() % 1000 >= 800) { // 4th step
                 intake.setPower(0);
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException e) {}
-
+            } else if (timer.milliseconds() % 1000 >= 300) { // 3rd step
                 intake.setPower(1);
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {}
-
+            } else if (timer.milliseconds() % 1000 >= 100) { // 2nd step
                 intake.setPower(0);
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException e) {}
+            } else { // 1st step
+                intake.setPower(-0.5);
+                launchStateItem.setValue("Feed loop %d", (int)(timer.milliseconds() / 1000) + 1);
             }
-            launcher.setPower(0);
-            launchServo(0);
-            launchState = 0;
-            launchStateItem.setValue("Idle");
         }
     }
 }
