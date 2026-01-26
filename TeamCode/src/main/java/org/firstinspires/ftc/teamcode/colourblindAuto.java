@@ -1,5 +1,7 @@
 
 package org.firstinspires.ftc.teamcode;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -16,8 +18,8 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-@Autonomous(name = "Blue Auto", group = "Autonomous")
-public class blueAuto extends OpMode {
+@Autonomous(name = "Colourblind Auto", group = "Autonomous")
+public class colourblindAuto extends OpMode {
     private TelemetryManager panelsTelemetry; // Panels Telemetry instance
     public Follower follower; // Pedro Pathing follower instance
     private int pathState; // Current autonomous path state (state machine)
@@ -32,10 +34,53 @@ public class blueAuto extends OpMode {
     double launcherPower;
     int launcherAccelTime;
     int launchState;
+    boolean isRed;
+    boolean initLoopButtonPressed;
     ElapsedTime timer = new ElapsedTime();
 
-    // TODO: MODIFY START HEADING AS NEEDED
-    private final Pose startPose = new Pose(20.451127819548873, 122.40601503759397, Math.toRadians(135));
+    @Override
+    public void init_loop() {
+        // Default values
+        launcherPower = 0.55; // 0.55 for full battery, 0.6 for half battery
+        launcherAccelTime = 3000;
+        isRed = false; // true for Red, false for Blue
+
+        launchState = -1;
+        initLoopButtonPressed = false;
+
+        if (gamepad1.left_bumper || gamepad1.right_bumper || gamepad1.dpad_up || gamepad1.dpad_down || gamepad1.b) {
+            if (modifyAttrButtonPressed) {
+                return;
+            }
+            if (gamepad1.left_bumper) {
+                launcherPower = Math.max(launcherPower - 0.01, 0);
+            }
+            if (gamepad1.right_bumper) {
+                launcherPower = Math.min(launcherPower + 0.01, 1);
+            }
+            if (gamepad1.dpad_up) {
+                launcherAccelTime += 100;
+            }
+            if (gamepad1.dpad_down) {
+                launcherAccelTime = Math.max(launcherAccelTime - 100, 0);
+            }
+            if (gamepad1.b) {
+                isRed = !isRed;
+                paths = new Paths(follower, isRed); // Rebuild paths
+                follower.setStartingPose(paths.startPos[0], paths.startPos[1], paths.startPos[2]);
+            }
+        } else {
+            modifyAttrButtonPressed = false;
+        }
+
+        telemetry.addData("Launcher Power", "%.2f", launcherPower);
+        telemetry.addData("Launcher Accel Time", "%d ms", launcherAccelTime);
+        telemetry.addData("Alliance Colour", isRed ? "Red" : "Blue");
+        panelsTelemetry.debug("Launcher Power", String.format("%.2f", launcherPower));
+        panelsTelemetry.debug("Launcher Accel Time", String.format("%d ms", launcherAccelTime));
+        panelsTelemetry.debug("Alliance Colour", isRed ? "Red" : "Blue");
+        panelsTelemetry.update(telemetry);
+    }
 
     @Override
     public void init() {
@@ -56,27 +101,22 @@ public class blueAuto extends OpMode {
         opmodeTimer.resetTimer();
 
         follower = Constants.createFollower(hardwareMap);
-        follower.setStartingPose(startPose);
-
-        paths = new Paths(follower); // Build paths
 
         panelsTelemetry.debug("Status", "Initialized");
         panelsTelemetry.update(telemetry);
-
-        launcherPower = 0.55; // TODO: Set launcher power (0.55 for full battery, 0.6 for half battery)
-        launcherAccelTime = 3000;
-        launchState = -1;
     }
 
     void launchServo(double power) {
         leftFeeder.setPower(power);
         rightFeeder.setPower(power);
     }
+
     void startIntake() {
         intake.setPower(1);
         launcher.setPower(-0.2);
         launchServo(-1);
     }
+
     void stopIntake() {
         intake.setPower(0);
         if (launchState == -1) {
@@ -84,6 +124,7 @@ public class blueAuto extends OpMode {
         }
         launchServo(0);
     }
+
     void launch() {
         if (launchState == 0) { // Start
             launcher.setPower(launcherPower);
@@ -113,7 +154,6 @@ public class blueAuto extends OpMode {
 
     @Override
     public void loop() {
-
         launch(); // Update launcher state machine
         follower.update(); // Update Pedro Pathing
         autonomousPathUpdate(); // Update autonomous state machine
@@ -127,59 +167,65 @@ public class blueAuto extends OpMode {
     }
 
     public static class Paths {
-        public PathChain Path1;
-        public PathChain Path2;
-        public PathChain Path3;
-        public PathChain Path4;
-        public PathChain Path5;
+        public final PathChain Path1;
+        public final PathChain Path2;
+        public final PathChain Path3;
+        public final PathChain Path4;
+        public final PathChain Path5;
 
-        // Position values for easy editing
+        // TODO: Edit positions if needed
+        // Position values for easy editing - Blue Alliance values used as default
+        private final double[] colourblindStartPos = { 20, 123, Math.toRadians(135) };
+        private final double[] colourblindLaunchPos = { 37, 106, Math.toRadians(135) };
+        private final double[] colourblindIntake1StartPos = { 50, 87, Math.toRadians(180) };
+        private final double[] colourblindIntake1EndPos = { 20, colourblindIntake1StartPos[1], colourblindIntake1StartPos[2] };
+        private final double[] colourblindEndPos = { 55, 132, Math.toRadians(90) };
 
-        // Blue
-        private double[] startPos = {20, 123, Math.toRadians(135)};
-        private double[] launchPos = {37, 106, Math.toRadians(135)};
-        private double[] intake1StartPos = {50, 87, Math.toRadians(180)};
-        private double[] intake1EndPos = {20, intake1StartPos[1], intake1StartPos[2]};
-        private double[] endPos = {55, 132, Math.toRadians(90)};
+        public final double[] startPos;
+        public final double[] launchPos;
+        public final double[] intake1StartPos;
+        public final double[] intake1EndPos;
+        public final double[] endPos;
 
-        // Red
-        /*private double[] startPos = {124, 123, Math.toRadians(45)};
-        private double[] launchPos = {107, 106, Math.toRadians(45)};
-        private double[] intake1StartPos = {94, 87, Math.toRadians(0)};
-        private double[] intake1EndPos = {124, intake1StartPos[1], intake1StartPos[2]};
-        private double[] endPos = {89, 132, Math.toRadians(90)};*/
-
-        public Paths(Follower follower) {
+        public Paths(Follower follower, boolean isRed) {
+            if (isRed) { // Red Alliance - mirror positions
+                startPos = new double[]{ 144 - colourblindStartPos[0], colourblindStartPos[1], Math.PI - colourblindStartPos[2] };
+                launchPos = new double[]{ 144 - colourblindLaunchPos[0], colourblindLaunchPos[1], Math.PI - colourblindLaunchPos[2] };
+                intake1StartPos = new double[]{ 144 - colourblindIntake1StartPos[0], colourblindIntake1StartPos[1], Math.PI - colourblindIntake1StartPos[2] };
+                intake1EndPos = new double[]{ 144 - colourblindIntake1EndPos[0], colourblindIntake1EndPos[1], Math.PI - colourblindIntake1EndPos[2] };
+                endPos = new double[]{ 144 - colourblindEndPos[0], colourblindEndPos[1], Math.PI - colourblindEndPos[2] };
+            } else {
+                startPos = colourblindStartPos;
+                launchPos = colourblindLaunchPos;
+                intake1StartPos = colourblindIntake1StartPos;
+                intake1EndPos = colourblindIntake1EndPos;
+                endPos = colourblindEndPos;
+            }
             Path1 = follower.pathBuilder().addPath(
-                new BezierLine(
-                    new Pose(startPos[0], startPos[1]),
-                    new Pose(launchPos[0], launchPos[1])
-                )
-            ).setLinearHeadingInterpolation(startPos[2], launchPos[2]).build();
+                    new BezierLine(
+                            new Pose(startPos[0], startPos[1]),
+                            new Pose(launchPos[0], launchPos[1])))
+                    .setLinearHeadingInterpolation(startPos[2], launchPos[2]).build();
             Path2 = follower.pathBuilder().addPath(
-                new BezierLine(
-                    new Pose(launchPos[0], launchPos[1]),
-                    new Pose(intake1StartPos[0], intake1StartPos[1])
-                )
-            ).setLinearHeadingInterpolation(launchPos[2], intake1StartPos[2]).build();
+                    new BezierLine(
+                            new Pose(launchPos[0], launchPos[1]),
+                            new Pose(intake1StartPos[0], intake1StartPos[1])))
+                    .setLinearHeadingInterpolation(launchPos[2], intake1StartPos[2]).build();
             Path3 = follower.pathBuilder().addPath(
-                new BezierLine(
-                     new Pose(intake1StartPos[0], intake1StartPos[1]),
-                     new Pose(intake1EndPos[0], intake1EndPos[1])
-                )
-            ).setLinearHeadingInterpolation(intake1StartPos[2], intake1EndPos[2]).build();
+                    new BezierLine(
+                            new Pose(intake1StartPos[0], intake1StartPos[1]),
+                            new Pose(intake1EndPos[0], intake1EndPos[1])))
+                    .setLinearHeadingInterpolation(intake1StartPos[2], intake1EndPos[2]).build();
             Path4 = follower.pathBuilder().addPath(
-                new BezierLine(
-                    new Pose(intake1EndPos[0], intake1EndPos[1]),
-                    new Pose(launchPos[0], launchPos[1])
-                )
-            ).setLinearHeadingInterpolation(intake1EndPos[2], launchPos[2]).build();
+                    new BezierLine(
+                            new Pose(intake1EndPos[0], intake1EndPos[1]),
+                            new Pose(launchPos[0], launchPos[1])))
+                    .setLinearHeadingInterpolation(intake1EndPos[2], launchPos[2]).build();
             Path5 = follower.pathBuilder().addPath(
-                new BezierLine(
-                    new Pose(launchPos[0], launchPos[1]),
-                    new Pose(endPos[0], endPos[1])
-                )
-            ).setLinearHeadingInterpolation(launchPos[2], endPos[2]).build();
+                    new BezierLine(
+                            new Pose(launchPos[0], launchPos[1]),
+                            new Pose(endPos[0], endPos[1])))
+                    .setLinearHeadingInterpolation(launchPos[2], endPos[2]).build();
         }
     }
 
@@ -187,7 +233,7 @@ public class blueAuto extends OpMode {
         // Add your state machine Here
         // Access paths with paths.pathName
         // Refer to the Pedro Pathing Docs (Auto Example) for an example state machine
-        switch(pathState) {
+        switch (pathState) {
             case 0:
                 startIntake();
                 launchState = 0; // Start launching pre-loaded artifacts
@@ -227,7 +273,7 @@ public class blueAuto extends OpMode {
                 }
                 break;
             case 6:
-                if(launchState == -1){
+                if (launchState == -1) {
                     follower.followPath(paths.Path5, true);
                     setPathState(7);
                 }
@@ -241,9 +287,8 @@ public class blueAuto extends OpMode {
         }
     }
 
-    public void setPathState(int pState){
+    public void setPathState(int pState) {
         pathState = pState;
         pathTimer.resetTimer();
     }
 }
-    
