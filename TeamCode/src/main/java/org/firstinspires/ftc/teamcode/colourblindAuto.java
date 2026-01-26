@@ -40,16 +40,8 @@ public class colourblindAuto extends OpMode {
 
     @Override
     public void init_loop() {
-        // Default values
-        launcherPower = 0.55; // 0.55 for full battery, 0.6 for half battery
-        launcherAccelTime = 3000;
-        isRed = false; // true for Red, false for Blue
-
-        launchState = -1;
-        initLoopButtonPressed = false;
-
         if (gamepad1.left_bumper || gamepad1.right_bumper || gamepad1.dpad_up || gamepad1.dpad_down || gamepad1.b) {
-            if (modifyAttrButtonPressed) {
+            if (initLoopButtonPressed) {
                 return;
             }
             if (gamepad1.left_bumper) {
@@ -67,18 +59,19 @@ public class colourblindAuto extends OpMode {
             if (gamepad1.b) {
                 isRed = !isRed;
                 paths = new Paths(follower, isRed); // Rebuild paths
-                follower.setStartingPose(paths.startPos[0], paths.startPos[1], paths.startPos[2]);
+                follower.setStartingPose(new Pose(paths.startPos[0], paths.startPos[1], paths.startPos[2]));
             }
+            initLoopButtonPressed = true;
         } else {
-            modifyAttrButtonPressed = false;
+            initLoopButtonPressed = false;
         }
 
-        telemetry.addData("Launcher Power", "%.2f", launcherPower);
+        /*telemetry.addData("Launcher Power", "%.2f", launcherPower);
         telemetry.addData("Launcher Accel Time", "%d ms", launcherAccelTime);
-        telemetry.addData("Alliance Colour", isRed ? "Red" : "Blue");
-        panelsTelemetry.debug("Launcher Power", String.format("%.2f", launcherPower));
-        panelsTelemetry.debug("Launcher Accel Time", String.format("%d ms", launcherAccelTime));
-        panelsTelemetry.debug("Alliance Colour", isRed ? "Red" : "Blue");
+        telemetry.addData("Alliance Colour", isRed ? "Red" : "Blue");*/
+        panelsTelemetry.debug("Launcher Power: " + String.format("%.2f", launcherPower));
+        panelsTelemetry.debug("Launcher Accel Time: " + String.format("%d ms", launcherAccelTime));
+        panelsTelemetry.debug("Alliance Colour: " + (isRed ? "Red" : "Blue"));
         panelsTelemetry.update(telemetry);
     }
 
@@ -104,6 +97,16 @@ public class colourblindAuto extends OpMode {
 
         panelsTelemetry.debug("Status", "Initialized");
         panelsTelemetry.update(telemetry);
+
+        // Default values
+        launcherPower = 0.6; // 0.55 for full battery, 0.6 for half battery
+        launcherAccelTime = 3000;
+        isRed = false; // true for Red, false for Blue
+        paths = new Paths(follower, false);
+        follower.setStartingPose(new Pose(paths.startPos[0], paths.startPos[1], paths.startPos[2]));
+
+        launchState = -1;
+        initLoopButtonPressed = false;
     }
 
     void launchServo(double power) {
@@ -113,7 +116,9 @@ public class colourblindAuto extends OpMode {
 
     void startIntake() {
         intake.setPower(1);
-        launcher.setPower(-0.2);
+        if (launchState == -1) {
+            launcher.setPower(-0.2);
+        }
         launchServo(-1);
     }
 
@@ -135,6 +140,8 @@ public class colourblindAuto extends OpMode {
                 launchServo(1);
                 timer.reset();
                 launchState = 2;
+            } else if (timer.milliseconds() >= (launcherAccelTime - 2000)) {
+                stopIntake();
             }
         } else if (launchState == 2) {
             if (timer.milliseconds() >= 3000) {
@@ -144,7 +151,7 @@ public class colourblindAuto extends OpMode {
                 intake.setPower(0);
             } else if (timer.milliseconds() % 1000 >= 300) { // 3rd step
                 intake.setPower(1);
-            } else if (timer.milliseconds() % 1000 >= 100) { // 2nd step
+            } else if (timer.milliseconds() % 1000 >= 150) { // 2nd step
                 intake.setPower(0);
             } else { // 1st step
                 intake.setPower(-0.5);
@@ -178,8 +185,8 @@ public class colourblindAuto extends OpMode {
         private final double[] colourblindStartPos = { 20, 123, Math.toRadians(135) };
         private final double[] colourblindLaunchPos = { 37, 106, Math.toRadians(135) };
         private final double[] colourblindIntake1StartPos = { 50, 87, Math.toRadians(180) };
-        private final double[] colourblindIntake1EndPos = { 20, colourblindIntake1StartPos[1], colourblindIntake1StartPos[2] };
-        private final double[] colourblindEndPos = { 55, 132, Math.toRadians(90) };
+        private final double[] colourblindIntake1EndPos = { 22, colourblindIntake1StartPos[1], colourblindIntake1StartPos[2] };
+        private final double[] colourblindEndPos = { 55, 127, Math.toRadians(90) };
 
         public final double[] startPos;
         public final double[] launchPos;
@@ -235,12 +242,12 @@ public class colourblindAuto extends OpMode {
         // Refer to the Pedro Pathing Docs (Auto Example) for an example state machine
         switch (pathState) {
             case 0:
-                startIntake();
                 launchState = 0; // Start launching pre-loaded artifacts
+                startIntake();
                 follower.followPath(paths.Path1, 0.5, true);
-                setPathState(1);
+                setPathState(2);
                 break;
-            case 1:
+            case 1: // TODO: UNUSED
                 if (pathTimer.getElapsedTime() > (launcherAccelTime - 1000)) {
                     stopIntake();
                     setPathState(2);
@@ -263,10 +270,10 @@ public class colourblindAuto extends OpMode {
                 if (!follower.isBusy()) {
                     launchState = 0; // Launch first row of collected artifacts
                     follower.followPath(paths.Path4, 0.75, true);
-                    setPathState(5);
+                    setPathState(6);
                 }
                 break;
-            case 5:
+            case 5: // TODO: UNUSED
                 if (pathTimer.getElapsedTime() > (launcherAccelTime - 1000)) {
                     stopIntake();
                     setPathState(6);
