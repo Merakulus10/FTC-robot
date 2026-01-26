@@ -151,10 +151,10 @@ public class colourblindAuto extends OpMode {
                 intake.setPower(0);
             } else if (timer.milliseconds() % 1000 >= 300) { // 3rd step
                 intake.setPower(1);
-            } else if (timer.milliseconds() % 1000 >= 150) { // 2nd step
+            } else if (timer.milliseconds() % 1000 >= 100) { // 2nd step
                 intake.setPower(0);
             } else { // 1st step
-                intake.setPower(-0.5);
+                intake.setPower(-0.8);
             }
         }
     }
