@@ -16,8 +16,8 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-@Autonomous(name = "Blue Auto", group = "Autonomous")
-public class blueAuto extends OpMode {
+@Autonomous(name = "Red Auto", group = "Autonomous")
+public class redAuto extends OpMode {
     private TelemetryManager panelsTelemetry; // Panels Telemetry instance
     public Follower follower; // Pedro Pathing follower instance
     private int pathState; // Current autonomous path state (state machine)
@@ -63,8 +63,8 @@ public class blueAuto extends OpMode {
         panelsTelemetry.debug("Status", "Initialized");
         panelsTelemetry.update(telemetry);
 
-        launcherPower = 0.6; // TODO: Set launcher power
-        launcherAccelTime = 3000; // TODO: Set launcher acceleration time in milliseconds
+        launcherPower = 0.55; // TODO: Set launcher power (0.55 for full battery, 0.6 for half battery)
+        launcherAccelTime = 3000;
         launchState = -1;
     }
 
@@ -79,12 +79,13 @@ public class blueAuto extends OpMode {
     }
     void stopIntake() {
         intake.setPower(0);
-        launcher.setPower(0);
+        if (launchState == -1) {
+            launcher.setPower(0);
+        }
         launchServo(0);
     }
     void launch() {
         if (launchState == 0) { // Start
-            stopIntake();
             launcher.setPower(launcherPower);
             timer.reset();
             launchState = 1;
@@ -96,8 +97,8 @@ public class blueAuto extends OpMode {
             }
         } else if (launchState == 2) {
             if (timer.milliseconds() >= 3000) {
-                stopIntake();
                 launchState = -1; // Finish
+                stopIntake();
             } else if (timer.milliseconds() % 1000 >= 800) { // 4th step
                 intake.setPower(0);
             } else if (timer.milliseconds() % 1000 >= 300) { // 3rd step
@@ -133,42 +134,51 @@ public class blueAuto extends OpMode {
         public PathChain Path5;
 
         // Position values for easy editing
-        private double[] startPos = {20, 123, Math.toRadians(135)};
+
+        // Blue
+        /*private double[] startPos = {20, 123, Math.toRadians(135)};
         private double[] launchPos = {37, 106, Math.toRadians(135)};
-        private double[] intake1StartPos = {51.5, 87, Math.toRadians(180)};
+        private double[] intake1StartPos = {50, 87, Math.toRadians(180)};
         private double[] intake1EndPos = {20, intake1StartPos[1], intake1StartPos[2]};
-        private double[] endPos = {55, 132, Math.toRadians(90)};
+        private double[] endPos = {55, 132, Math.toRadians(90)};*/
+
+        // Red
+        private double[] startPos = {124, 123, Math.toRadians(45)};
+        private double[] launchPos = {107, 106, Math.toRadians(45)};
+        private double[] intake1StartPos = {94, 87, Math.toRadians(0)};
+        private double[] intake1EndPos = {124, intake1StartPos[1], intake1StartPos[2]};
+        private double[] endPos = {89, 132, Math.toRadians(90)};
 
         public Paths(Follower follower) {
             Path1 = follower.pathBuilder().addPath(
-                new BezierLine(
-                    new Pose(startPos[0], startPos[1]),
-                    new Pose(launchPos[0], launchPos[1])
-                )
+                    new BezierLine(
+                            new Pose(startPos[0], startPos[1]),
+                            new Pose(launchPos[0], launchPos[1])
+                    )
             ).setLinearHeadingInterpolation(startPos[2], launchPos[2]).build();
             Path2 = follower.pathBuilder().addPath(
-                new BezierLine(
-                    new Pose(launchPos[0], launchPos[1]),
-                    new Pose(intake1StartPos[0], intake1StartPos[1])
-                )
+                    new BezierLine(
+                            new Pose(launchPos[0], launchPos[1]),
+                            new Pose(intake1StartPos[0], intake1StartPos[1])
+                    )
             ).setLinearHeadingInterpolation(launchPos[2], intake1StartPos[2]).build();
             Path3 = follower.pathBuilder().addPath(
-                new BezierLine(
-                     new Pose(intake1StartPos[0], intake1StartPos[1]),
-                     new Pose(intake1EndPos[0], intake1EndPos[1])
-                )
+                    new BezierLine(
+                            new Pose(intake1StartPos[0], intake1StartPos[1]),
+                            new Pose(intake1EndPos[0], intake1EndPos[1])
+                    )
             ).setLinearHeadingInterpolation(intake1StartPos[2], intake1EndPos[2]).build();
             Path4 = follower.pathBuilder().addPath(
-                new BezierLine(
-                    new Pose(intake1EndPos[0], intake1EndPos[1]),
-                    new Pose(launchPos[0], launchPos[1])
-                )
+                    new BezierLine(
+                            new Pose(intake1EndPos[0], intake1EndPos[1]),
+                            new Pose(launchPos[0], launchPos[1])
+                    )
             ).setLinearHeadingInterpolation(intake1EndPos[2], launchPos[2]).build();
             Path5 = follower.pathBuilder().addPath(
-                new BezierLine(
-                    new Pose(launchPos[0], launchPos[1]),
-                    new Pose(endPos[0], endPos[1])
-                )
+                    new BezierLine(
+                            new Pose(launchPos[0], launchPos[1]),
+                            new Pose(endPos[0], endPos[1])
+                    )
             ).setLinearHeadingInterpolation(launchPos[2], endPos[2]).build();
         }
     }
@@ -177,41 +187,56 @@ public class blueAuto extends OpMode {
         // Add your state machine Here
         // Access paths with paths.pathName
         // Refer to the Pedro Pathing Docs (Auto Example) for an example state machine
-        switch(pathState){
+        switch(pathState) {
             case 0:
+                startIntake();
                 launchState = 0; // Start launching pre-loaded artifacts
                 follower.followPath(paths.Path1, 0.5, true);
                 setPathState(1);
                 break;
             case 1:
-                if(launchState == -1){
-                    follower.followPath(paths.Path2, true);
+                if (pathTimer.getElapsedTime() > (launcherAccelTime - 1000)) {
+                    stopIntake();
                     setPathState(2);
                 }
                 break;
             case 2:
-                if(!follower.isBusy()){
-                    startIntake();
-                    follower.followPath(paths.Path3, 0.3, true);
+                if (launchState == -1) {
+                    follower.followPath(paths.Path2, true);
                     setPathState(3);
                 }
                 break;
             case 3:
-                if(!follower.isBusy()){
-                    stopIntake();
-                    launchState = 0; // Launch first row of collected artifacts
-                    follower.followPath(paths.Path4, 0.75, true);
+                if (!follower.isBusy()) {
+                    startIntake();
+                    follower.followPath(paths.Path3, 0.3, true);
                     setPathState(4);
                 }
                 break;
             case 4:
-                if(launchState == -1){
-                    follower.followPath(paths.Path5, true);
+                if (!follower.isBusy()) {
+                    launchState = 0; // Launch first row of collected artifacts
+                    follower.followPath(paths.Path4, 0.75, true);
                     setPathState(5);
                 }
                 break;
             case 5:
-                follower.deactivateAllPIDFs(); // Stop all movement
+                if (pathTimer.getElapsedTime() > (launcherAccelTime - 1000)) {
+                    stopIntake();
+                    setPathState(6);
+                }
+                break;
+            case 6:
+                if(launchState == -1){
+                    follower.followPath(paths.Path5, true);
+                    setPathState(7);
+                }
+                break;
+            case 7:
+                if (pathTimer.getElapsedTime() > 5000) {
+                    follower.deactivateAllPIDFs(); // Stop all movement
+                    setPathState(-1); // End of auto
+                }
                 break;
         }
     }
