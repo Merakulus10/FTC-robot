@@ -162,11 +162,11 @@ public class StarterBotTeleopMecanums extends OpMode {
             }
             modifyAttrButtonTimer.reset();
             if (gamepad1.left_bumper) {
-                launcherPower = Math.max(launcherPower - 0.05, 0);
+                launcherPower = Math.max(launcherPower - 0.02, 0);
                 launcherPowerItem.setValue("%.2f", launcherPower);
             }
             if (gamepad1.right_bumper) {
-                launcherPower = Math.min(launcherPower + 0.05, 1);
+                launcherPower = Math.min(launcherPower + 0.02, 1);
                 launcherPowerItem.setValue("%.2f", launcherPower);
             }
             if (gamepad1.dpad_up) {
