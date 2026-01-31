@@ -122,7 +122,7 @@ public class StarterBotTeleopMecanums extends OpMode {
     @Override
     public void loop() {
         if (launchState == 2) {
-            if (gamepad1.a) {
+            if (gamepad1.left_bumper) {
                 launchState = 0;
                 launchStateItem.setValue("Idle");
             } else {
@@ -138,7 +138,7 @@ public class StarterBotTeleopMecanums extends OpMode {
             timer.reset();
             launch();
             return;
-        } else if (gamepad1.b) { // start launch sequence
+        } else if (gamepad1.right_bumper) { // start launch sequence
             launch();
         }
         if (gamepad1.left_trigger > 0) {
@@ -146,7 +146,7 @@ public class StarterBotTeleopMecanums extends OpMode {
         } else if (gamepad1.right_trigger > 0) {
             intake.setPower(-gamepad1.right_trigger);
             launchServo(-gamepad1.right_trigger);
-        } else if (gamepad1.a) { // run intake
+        } else if (gamepad1.left_bumper) { // run intake
             if (launchState != 0) {
                 launchState = 0;
                 launchStateItem.setValue("Idle");
@@ -156,16 +156,16 @@ public class StarterBotTeleopMecanums extends OpMode {
             stopIntake();
         }
 
-        if (gamepad1.left_bumper || gamepad1.right_bumper || gamepad1.dpad_up || gamepad1.dpad_down) {
+        if (gamepad1.dpad_left || gamepad1.dpad_right || gamepad1.dpad_up || gamepad1.dpad_down) {
             if (modifyAttrButtonPressed && modifyAttrButtonTimer.milliseconds() < 500) {
                 return;
             }
             modifyAttrButtonTimer.reset();
-            if (gamepad1.left_bumper) {
+            if (gamepad1.dpad_left) {
                 launcherPower = Math.max(launcherPower - 0.02, 0);
                 launcherPowerItem.setValue("%.2f", launcherPower);
             }
-            if (gamepad1.right_bumper) {
+            if (gamepad1.dpad_right) {
                 launcherPower = Math.min(launcherPower + 0.02, 1);
                 launcherPowerItem.setValue("%.2f", launcherPower);
             }
