@@ -59,7 +59,7 @@ public class colourblindAuto extends OpMode {
             if (gamepad1.b) {
                 isRed = !isRed;
                 paths = new Paths(follower, isRed); // Rebuild paths
-                follower.setStartingPose(new Pose(paths.startPos[0], paths.startPos[1], paths.startPos[2]));
+                // follower.setStartingPose(new Pose(paths.startPos[0], paths.startPos[1], paths.startPos[2]));
             }
             initLoopButtonPressed = true;
         } else {
@@ -103,7 +103,7 @@ public class colourblindAuto extends OpMode {
         launcherAccelTime = 3000;
         isRed = false; // true for Red, false for Blue
         paths = new Paths(follower, false);
-        follower.setStartingPose(new Pose(paths.startPos[0], paths.startPos[1], paths.startPos[2]));
+        // follower.setStartingPose(new Pose(paths.startPos[0], paths.startPos[1], paths.startPos[2]));
 
         launchState = -1;
         initLoopButtonPressed = false;
@@ -242,6 +242,7 @@ public class colourblindAuto extends OpMode {
         // Refer to the Pedro Pathing Docs (Auto Example) for an example state machine
         switch (pathState) {
             case 0:
+                follower.setStartingPose(new Pose(paths.startPos[0], paths.startPos[1], paths.startPos[2]));
                 launchState = 0; // Start launching pre-loaded artifacts
                 startIntake();
                 follower.followPath(paths.Path1, 0.5, true);
